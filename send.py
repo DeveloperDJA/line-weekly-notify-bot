@@ -1,45 +1,29 @@
-import logging
 import os
-import sys
-from typing import Any, Dict
-
 import requests
-
+from typing import Dict, Any
 
 LINE_PUSH_API_URL = "https://api.line.me/v2/bot/message/push"
 
 
-def get_required_env(name: str) -> str:
-    value = os.getenv(name)
-    if not value:
-        raise ValueError(f"Missing required environment variable: {name}")
-    return value
+def send_push_message(
+    channel_access_token: str,
+    group_id: str,
+    text: str,
+) -> Dict[str, Any]:
 
-
-def build_message_text() -> str:
-    return (
-        "【📅 定例MTGのお知らせ（毎週木曜 21:00〜）】\n\n"
-        "■ Teams URL：\n"
-        "https://teams.microsoft.com/meet/43131765033851?p=GJHg166GJsiwNDg9Fy\n\n"
-        "■ 会議ID：\n"
-        "431 317 650 338 51\n\n"
-        "■ パスコード：\n"
-        "uq6eH2uP\n\n"
-        "＝＝＝＝＝＝＝＝＝＝＝\n"
-        "参加できる方のみ「👍」リアクションお願いします\n"
-        "（不参加の方はリアクション不要です）\n"
-        "＝＝＝＝＝＝＝＝＝＝＝"
-    )
-
-
-def send_push_message(channel_access_token: str, group_id: str, text: str) -> Dict[str, Any]:
     headers = {
         "Authorization": f"Bearer {channel_access_token}",
         "Content-Type": "application/json",
     }
+
     payload = {
         "to": group_id,
-        "messages": [{"type": "text", "text": text}],
+        "messages": [
+            {
+                "type": "text",
+                "text": text,
+            }
+        ],
     }
 
     response = requests.post(
@@ -61,33 +45,38 @@ def send_push_message(channel_access_token: str, group_id: str, text: str) -> Di
     return {"status": response.status_code, "body": response.json()}
 
 
-def main() -> int:
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s [%(levelname)s] %(message)s",
+def main():
+
+    print("[INFO] Starting LINE weekly notification job")
+
+    channel_access_token = os.environ["LINE_CHANNEL_ACCESS_TOKEN"].strip()
+    group_id = os.environ["LINE_GROUP_ID"].strip()
+
+    if not channel_access_token:
+        raise ValueError("LINE_CHANNEL_ACCESS_TOKEN is empty")
+
+    if not group_id:
+        raise ValueError("LINE_GROUP_ID is empty")
+
+    print("[INFO] Environment variables validated")
+
+    message_text = """【定例MTGのお知らせ】
+
+📅 毎週木曜 21:00〜  
+📍 Teams
+
+本日もよろしくお願いします！
+"""
+
+    result = send_push_message(
+        channel_access_token=channel_access_token,
+        group_id=group_id,
+        text=message_text,
     )
 
-    try:
-        logging.info("Starting LINE weekly notification job")
-
-        channel_access_token = get_required_env("LINE_CHANNEL_ACCESS_TOKEN")
-        group_id = get_required_env("LINE_GROUP_ID")
-
-        logging.info("Environment variables validated")
-
-        result = send_push_message(
-            channel_access_token=channel_access_token,
-            group_id=group_id,
-            text=build_message_text(),
-        )
-
-        logging.info("Push message sent successfully: %s", result)
-        return 0
-
-    except Exception as exc:
-        logging.exception("Job failed: %s", exc)
-        return 1
+    print("[INFO] LINE notification sent successfully")
+    print(result)
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    main()
