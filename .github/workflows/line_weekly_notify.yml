@@ -2,9 +2,9 @@ name: LINE Weekly MTG Notify
 
 on:
   schedule:
-    # Every Thursday 10:00 JST = Every Thursday 01:00 UTC
-    - cron: '0 1 * * 4'
+    - cron: '*/5 * * * *'
   workflow_dispatch:
+
 
 jobs:
   notify:
